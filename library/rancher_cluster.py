@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import json
+import requests
 from ansible.module_utils.basic import *
 
 
@@ -20,6 +22,7 @@ def main():
 
     fields = {
         "name": {"required": True, "type": "str"},
+        "api_key": {"required": True, "type": "str"},
         "agentImageOverride": {"required": False, "type": "str"},
         "description": {"required": False, "type": "str"},
         "desiredAgentImage": {"required": False, "type": "str"},
