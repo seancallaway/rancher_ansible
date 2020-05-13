@@ -30,7 +30,28 @@ def rancher_node_drained(data):
 def rancher_node_cordoned(data):
     is_error = False
     has_changed = False
-    meta = {"cordoned": "not yet implemented"}
+    meta = {}
+
+    headers = {
+        "Authorization": "Bearer {}".format(data['api_bearer_key'])
+    }
+
+    node = get_node(data['name'], data['rancher_url'], headers)
+    if not node:
+        return True, False, {'error': 'Node name not found or multiple nodes found.'}
+    if node['state'] == 'cordoned':
+        meta = node
+    else:
+        cordon_url = node['actions']['cordon']
+        cordon = requests.post(cordon_url, data=json.dumps({}), headers=headers)
+        meta = cordon
+
+        if cordon.status_code == 200:
+            has_changed = True
+            meta = {"status": "SUCCESS"}
+        else:
+            meta = {"status": cordon.status_code, "response": cordon.json()}
+
     return is_error, has_changed, meta
 
 
