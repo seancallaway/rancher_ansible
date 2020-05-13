@@ -69,8 +69,17 @@ def rancher_cluster_present(data):
     result = requests.post(url, json.dumps(data), headers=headers)
 
     if result.status_code == 201:
-        return False, True, result.json()
+        token_url = "{}{}".format(api_url, '/v3/clusterregistrationtoken')
+        token_data = {
+            "type": "clusterRegistrationToken",
+            "clusterId": result.json()['id'],
+        }
+        token_request = requests.post(token_url, json.dumps(token_data), headers=headers)
+        meta = result.json()
+        meta['registration_token'] = token_request.json()['nodeCommand']
+        return False, True, meta
     elif result.status_code == 422:
+        # This is returned when the cluster already exists, too.
         return False, False, result.json()
 
     # default: something went wrong
