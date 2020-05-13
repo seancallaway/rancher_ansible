@@ -8,6 +8,20 @@ import requests
 from ansible.module_utils.basic import AnsibleModule
 
 
+def get_or_create_registration_token(api_url, cluster_id, headers):
+    token_url = "{}/v3/clusters/{}/clusterregistrationtokens".format(api_url, cluster_id)
+    response = requests.get(token_url, headers=headers)
+    if response.json()['pagination']['total'] == 0:
+        create_token_url = "{}{}".format(api_url, '/v3/clusterregistrationtoken')
+        token_data = {
+            "type": "clusterRegistrationToken",
+            "clusterId": cluster_id,
+        }
+        token_request = requests.post(create_token_url, json.dumps(token_data), headers=headers)
+        return token_request.json()['nodeCommand']
+    return response.json()['data'][0]['nodeCommand']
+
+
 def rancher_cluster_present(data):
     """Run when state: present"""
 
@@ -69,18 +83,18 @@ def rancher_cluster_present(data):
     result = requests.post(url, json.dumps(data), headers=headers)
 
     if result.status_code == 201:
-        token_url = "{}{}".format(api_url, '/v3/clusterregistrationtoken')
-        token_data = {
-            "type": "clusterRegistrationToken",
-            "clusterId": result.json()['id'],
-        }
-        token_request = requests.post(token_url, json.dumps(token_data), headers=headers)
         meta = result.json()
-        meta['registration_token'] = token_request.json()['nodeCommand']
+        meta['registration_token'] = get_or_create_registration_token(api_url, result.json()['id'], headers)
         return False, True, meta
     elif result.status_code == 422:
         # This is returned when the cluster already exists, too.
-        return False, False, result.json()
+        meta = result.json()
+        if meta['code'] == 'NotUnique':
+            url = "{}{}?name={}".format(api_url, '/v3/clusters', data['name'])
+            search_result = requests.get(url, headers=headers)
+            meta = search_result.json()['data'][0]
+            meta['registration_token'] = get_or_create_registration_token(api_url, meta['id'], headers)
+        return False, False, meta
 
     # default: something went wrong
     meta = {"status": result.status_code, "response": result.json()}
