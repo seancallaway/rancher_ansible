@@ -1,4 +1,8 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2020, Sean Callaway <seancallaway@gmail.com>
+# MIT License (see LICENSE or https://opensource.org/licenses/MIT)
 import json
 import requests
 from ansible.module_utils.basic import AnsibleModule
