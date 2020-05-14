@@ -5,6 +5,7 @@
 # MIT License (see LICENSE or https://opensource.org/licenses/MIT)
 import json
 import requests
+from time import sleep
 from ansible.module_utils.basic import AnsibleModule
 
 
@@ -18,6 +19,23 @@ def get_node(name, api_url, headers):
     if node_search.json()['pagination']['total'] > 1 or node_search.json()['pagination']['total'] == 0:
         return None
     return node_search.json()['data'][0]
+
+
+def check_drain_status(name, api_url, headers):
+    """Checks to see if a node has drained.
+
+    Returns:
+        1 if drained
+        0 if draining
+        -1 if drain failed
+    """
+    node = get_node(name, api_url, headers)
+    if node['state'] == 'drained':
+        return 1
+    elif node['state'] == 'draining':
+        return 0
+    else:
+        return -1
 
 
 def rancher_node_drained(data):
@@ -36,20 +54,29 @@ def rancher_node_drained(data):
         meta = node
     else:
         drain_url = node['actions']['drain']
-        data = {
+        drain_data = {
             "deleteLocalData": data['deleteLocalData'],
             "force": data['force'],
             "ignoreDaemonSets": data['ignoreDaemonSets'],
             "gracePeriod": data['gracePeriod'],
             "timeout": data['timeout'],
         }
-        drain = requests.post(drain_url, data=json.dumps(data), headers=headers)
+        drain = requests.post(drain_url, data=json.dumps(drain_data), headers=headers)
         meta = drain
 
         if drain.status_code == 200:
-            has_changed = True
-            meta = {"status": "SUCCESS"}
-            # TODO: Wait for the node to drain or fail to drain
+            drain_status = check_drain_status(node['name'], data['rancher_url'], headers)
+            interval = 5
+            elapsed_time = 0
+            while drain_status == 0 and elapsed_time < data['timeout']:
+                sleep(interval)
+                elapsed_time += interval
+                drain_status = check_drain_status(node['name'], data['rancher_url'], headers)
+            if drain_status == 1:
+                has_changed = True
+                meta = {"status": "SUCCESS"}
+            else:
+                return True, True, {"status": "DRAIN FAILURE"}
         else:
             meta = {"status": drain.status_code, "response": drain.json()}
 
