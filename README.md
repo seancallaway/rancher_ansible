@@ -37,5 +37,19 @@ Note that the activation command (minus the `--worker`, `--etcd`, or `--controlp
       rancher_url: https://rancher.mydomain.com
       api_bearer_key: token-fg3ea:asdfimnoaqipnweron92u09jpqvijw490aqwekmowipcn
       state: cordoned
+  - name: Drain Node
+    rancher_node:
+      name: worker03
+      rancher_url: https://rancher.mydomain.com
+      api_bearer_key: token-fg3ea:asdfimnoaqipnweron92u09jpqvijw490aqwekmowipcn
+      force: true
+      deleteLocalData: true
+      state: drained
+  - name: Uncordon Node
+    rancher_node:
+      name: worker01
+      rancher_url: https://rancher.mydomain.com
+      api_bearer_key: token-fg3ea:asdfimnoaqipnweron92u09jpqvijw490aqwekmowipcn
+      state: uncordoned
 ```
 

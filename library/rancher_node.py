@@ -23,7 +23,36 @@ def get_node(name, api_url, headers):
 def rancher_node_drained(data):
     is_error = False
     has_changed = False
-    meta = {"drained": "not yet implemented"}
+    meta = {}
+
+    headers = {
+        "Authorization": "Bearer {}".format(data['api_bearer_key'])
+    }
+
+    node = get_node(data['name'], data['rancher_url'], headers)
+    if not node:
+        return True, False, {'error': 'Node name not found or multiple nodes found.'}
+    if node['state'] == 'drained':
+        meta = node
+    else:
+        drain_url = node['actions']['drain']
+        data = {
+            "deleteLocalData": data['deleteLocalData'],
+            "force": data['force'],
+            "ignoreDaemonSets": data['ignoreDaemonSets'],
+            "gracePeriod": data['gracePeriod'],
+            "timeout": data['timeout'],
+        }
+        drain = requests.post(drain_url, data=json.dumps(data), headers=headers)
+        meta = drain
+
+        if drain.status_code == 200:
+            has_changed = True
+            meta = {"status": "SUCCESS"}
+            # TODO: Wait for the node to drain or fail to drain
+        else:
+            meta = {"status": drain.status_code, "response": drain.json()}
+
     return is_error, has_changed, meta
 
 
@@ -88,6 +117,11 @@ def main():
         "name": {"required": True, "type": "str"},
         "rancher_url": {"required": True, "type": "str"},
         "api_bearer_key": {"required": True, "type": "str"},
+        "force": {"default": False, "type": "bool"},
+        "deleteLocalData": {"default": False, "type": "bool"},
+        "ignoreDaemonSets": {"default": True, "type": "bool"},
+        "timeout": {"default": 120, "type": "int"},
+        "gracePeriod": {"default": -1, "type": "int"},
         "state": {
             "default": "uncordoned",
             "choices": ["drained", "cordoned", "uncordoned"],
