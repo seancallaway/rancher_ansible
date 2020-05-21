@@ -2,7 +2,7 @@
 
 namespace: seancallaway
 name: rancher
-version: 0.2.0
+version: 0.2.0a
 readme: README.md
 authors:
 - Sean Callaway <seancallaway@gmail.com>
