@@ -1,0 +1,25 @@
+### REQUIRED
+
+namespace: seancallaway
+name: rancher
+version: 0.2.0
+readme: README.md
+authors:
+- Sean Callaway <seancallaway@gmail.com>
+
+
+### OPTIONAL but strongly recommended
+
+description: Ansible modules for interfacing with Rancher
+license:
+- MIT
+
+# A list of tags you want to associate with the collection for indexing/searching. A tag name has the same character
+# requirements as 'namespace' and 'name'
+tags:
+- rancher
+- kubernetes
+- docker
+dependencies: {}
+repository: https://github.com/seancallaway/rancher_ansible
+issues: https://github.com/seancallaway/rancher_ansible/issues
