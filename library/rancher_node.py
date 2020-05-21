@@ -9,19 +9,19 @@ from time import sleep
 from ansible.module_utils.basic import AnsibleModule
 
 
-def get_node(name, api_url, headers):
+def get_node(name, api_url, headers, validate_certs=True):
     """Returns a dict containing API results for the node if found.
 
     Returns None if not just one node is found
     """
     url = "{}/v3/nodes?name={}".format(api_url, name)
-    node_search = requests.get(url, headers=headers)
+    node_search = requests.get(url, headers=headers, verify=validate_certs)
     if node_search.json()['pagination']['total'] > 1 or node_search.json()['pagination']['total'] == 0:
         return None
     return node_search.json()['data'][0]
 
 
-def check_drain_status(name, api_url, headers):
+def check_drain_status(name, api_url, headers, validate_certs=True):
     """Checks to see if a node has drained.
 
     Returns:
@@ -29,7 +29,7 @@ def check_drain_status(name, api_url, headers):
         0 if draining
         -1 if drain failed
     """
-    node = get_node(name, api_url, headers)
+    node = get_node(name, api_url, headers, validate_certs)
     if node['state'] == 'drained':
         return 1
     elif node['state'] == 'draining':
@@ -47,7 +47,7 @@ def rancher_node_drained(data):
         "Authorization": "Bearer {}".format(data['api_bearer_key'])
     }
 
-    node = get_node(data['name'], data['rancher_url'], headers)
+    node = get_node(data['name'], data['rancher_url'], headers, data['validate_certs'])
     if not node:
         return True, False, {'error': 'Node name not found or multiple nodes found.'}
     if node['state'] == 'drained':
@@ -61,17 +61,18 @@ def rancher_node_drained(data):
             "gracePeriod": data['gracePeriod'],
             "timeout": data['timeout'],
         }
-        drain = requests.post(drain_url, data=json.dumps(drain_data), headers=headers)
+        drain = requests.post(drain_url, data=json.dumps(drain_data),
+                              headers=headers, verify=data['validate_certs'])
         meta = drain
 
         if drain.status_code == 200:
-            drain_status = check_drain_status(node['name'], data['rancher_url'], headers)
+            drain_status = check_drain_status(node['name'], data['rancher_url'], headers, data['validate_certs'])
             interval = 5
             elapsed_time = 0
             while drain_status == 0 and elapsed_time < data['timeout']:
                 sleep(interval)
                 elapsed_time += interval
-                drain_status = check_drain_status(node['name'], data['rancher_url'], headers)
+                drain_status = check_drain_status(node['name'], data['rancher_url'], headers, data['validate_certs'])
             if drain_status == 1:
                 has_changed = True
                 meta = {"status": "SUCCESS"}
@@ -92,14 +93,15 @@ def rancher_node_cordoned(data):
         "Authorization": "Bearer {}".format(data['api_bearer_key'])
     }
 
-    node = get_node(data['name'], data['rancher_url'], headers)
+    node = get_node(data['name'], data['rancher_url'], headers, data['validate_certs'])
     if not node:
         return True, False, {'error': 'Node name not found or multiple nodes found.'}
     if node['state'] == 'cordoned':
         meta = node
     else:
         cordon_url = node['actions']['cordon']
-        cordon = requests.post(cordon_url, data=json.dumps({}), headers=headers)
+        cordon = requests.post(cordon_url, data=json.dumps({}),
+                               headers=headers, verify=data['validate_certs'])
         meta = cordon
 
         if cordon.status_code == 200:
@@ -120,14 +122,15 @@ def rancher_node_uncordoned(data):
         "Authorization": "Bearer {}".format(data['api_bearer_key'])
     }
 
-    node = get_node(data['name'], data['rancher_url'], headers)
+    node = get_node(data['name'], data['rancher_url'], headers, data['validate_certs'])
     if not node:
         return True, False, {'error': 'Node name not found or multiple nodes found.'}
     if node['state'] == 'active':
         meta = node
     else:
         uncordon_url = node['actions']['uncordon']
-        uncordon = requests.post(uncordon_url, data=json.dumps({}), headers=headers)
+        uncordon = requests.post(uncordon_url, data=json.dumps({}),
+                                 headers=headers, verify=data['validate_certs'])
         meta = uncordon
 
         if uncordon.status_code == 200:
@@ -149,6 +152,7 @@ def main():
         "ignoreDaemonSets": {"default": True, "type": "bool"},
         "timeout": {"default": 120, "type": "int"},
         "gracePeriod": {"default": -1, "type": "int"},
+        "validate_certs": {"default": False, "type": "bool"},
         "state": {
             "default": "uncordoned",
             "choices": ["drained", "cordoned", "uncordoned"],
