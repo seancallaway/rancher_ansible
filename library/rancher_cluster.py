@@ -8,16 +8,17 @@ import requests
 from ansible.module_utils.basic import AnsibleModule
 
 
-def get_or_create_registration_token(api_url, cluster_id, headers):
+def get_or_create_registration_token(api_url, cluster_id, headers, validate_certs=True):
     token_url = "{}/v3/clusters/{}/clusterregistrationtokens".format(api_url, cluster_id)
-    response = requests.get(token_url, headers=headers)
+    response = requests.get(token_url, headers=headers, verify=validate_certs)
     if response.json()['pagination']['total'] == 0:
         create_token_url = "{}{}".format(api_url, '/v3/clusterregistrationtoken')
         token_data = {
             "type": "clusterRegistrationToken",
             "clusterId": cluster_id,
         }
-        token_request = requests.post(create_token_url, json.dumps(token_data), headers=headers)
+        token_request = requests.post(create_token_url, json.dumps(token_data),
+                                      headers=headers, verify=validate_certs)
         return token_request.json()['nodeCommand']
     return response.json()['data'][0]['nodeCommand']
 
@@ -30,12 +31,14 @@ def rancher_cluster_present(data):
 
     ignore_docker_version = data['ignore_docker_version']
     network_plugin = data['network_plugin']
+    validate_certs = data['validate_certs']
 
     del data['state']
     del data['api_bearer_key']
     del data['rancher_url']
     del data['ignore_docker_version']
     del data['network_plugin']
+    del data['validate_certs']
 
     data['type'] = 'cluster'
     data['rancherKubernetesEngineConfig'] = {
@@ -80,20 +83,22 @@ def rancher_cluster_present(data):
         "Authorization": "Bearer {}".format(api_key)
     }
     url = "{}{}".format(api_url, '/v3/clusters')
-    result = requests.post(url, json.dumps(data), headers=headers)
+    result = requests.post(url, json.dumps(data), headers=headers, verify=validate_certs)
 
     if result.status_code == 201:
         meta = result.json()
-        meta['registration_token'] = get_or_create_registration_token(api_url, result.json()['id'], headers)
+        meta['registration_token'] = get_or_create_registration_token(api_url, result.json()['id'],
+                                                                      headers, validate_certs)
         return False, True, meta
     elif result.status_code == 422:
         # This is returned when the cluster already exists, too.
         meta = result.json()
         if meta['code'] == 'NotUnique':
             url = "{}{}?name={}".format(api_url, '/v3/clusters', data['name'])
-            search_result = requests.get(url, headers=headers)
+            search_result = requests.get(url, headers=headers, verify=validate_certs)
             meta = search_result.json()['data'][0]
-            meta['registration_token'] = get_or_create_registration_token(api_url, meta['id'], headers)
+            meta['registration_token'] = get_or_create_registration_token(api_url, meta['id'],
+                                                                          headers, validate_certs)
         return False, False, meta
 
     # default: something went wrong
@@ -109,14 +114,14 @@ def rancher_cluster_absent(data):
         "Authorization": "Bearer {}".format(data['api_bearer_key'])
     }
     url = "{}{}?name={}".format(data['rancher_url'], '/v3/clusters', data['name'])
-    search_result = requests.get(url, headers=headers)
+    search_result = requests.get(url, headers=headers, verify=data['validate_certs'])
     if search_result.json()['pagination']['total'] > 1:
         return True, False, {"error": "Multiple clusters found using the provided name"}
     elif search_result.json()['pagination']['total'] == 0:
         return False, False, {"msg": "No clusters found using the provided name"}
 
     delete_link = search_result.json()['data'][0]['links']['remove']
-    delete_result = requests.delete(delete_link, headers=headers)
+    delete_result = requests.delete(delete_link, headers=headers, verify=data['validate_certs'])
 
     if delete_result.status_code == 200:
         return False, True, delete_result.json()
@@ -142,6 +147,7 @@ def main():
         "enableClusterAlerting": {"default": False, "type": "bool"},
         "enableClusterMonitoring": {"default": False, "type": "bool"},
         "ignore_docker_version": {"default": False, "type": "bool"},
+        "validate_certs": {"default": True, "type": "bool"},
         "network_plugin": {
             "default": "canal",
             "choices": ["canal", "calico", "flannel"],
