@@ -1,11 +1,22 @@
 # Rancher Modules
 > Ansible Modules for Rancher
 
-None of these are ready for use. When they are, they'll be converted to a collection and placed in Galaxy.
+An Ansible Collection providing modules for interfacing with Rancher.
+
+Contains the following modules:
+
+- `rancher_cluster` for creating, deleting, and gathering information about custom clusters
+- `rancher_node` for cordoning, draining, and uncordoning nodes
 
 ## Example Usage
 
-### rancher_cluster
+### Importing The Collection
+
+`ansible-galaxy collection install seancallaway.rancher`
+
+### Using the Modules
+
+#### rancher_cluster
 
 ```yaml
 - hosts: localhost
@@ -25,7 +36,7 @@ None of these are ready for use. When they are, they'll be converted to a collec
 Note that the activation command (minus the `--worker`, `--etcd`, or `--controlplane` flags) is returned as 
 `registration_token`.
 
-### rancher_node
+#### rancher_node
 
 ```yaml
 - hosts: localhost
@@ -52,4 +63,3 @@ Note that the activation command (minus the `--worker`, `--etcd`, or `--controlp
       api_bearer_key: token-fg3ea:asdfimnoaqipnweron92u09jpqvijw490aqwekmowipcn
       state: uncordoned
 ```
-
