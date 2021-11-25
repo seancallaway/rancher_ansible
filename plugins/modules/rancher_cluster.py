@@ -148,6 +148,8 @@ def main():
         "enableClusterMonitoring": {"default": False, "type": "bool"},
         "ignore_docker_version": {"default": False, "type": "bool"},
         "validate_certs": {"default": True, "type": "bool"},
+        "labels": {"required": False, "type": "dict"},
+        "annotations": {"required": False, "type": "dict"},
         "network_plugin": {
             "default": "canal",
             "choices": ["canal", "calico", "flannel"],
