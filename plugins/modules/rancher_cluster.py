@@ -138,7 +138,7 @@ def main():
     fields = {
         "name": {"required": True, "type": "str"},
         "rancher_url": {"required": True, "type": "str"},
-        "api_bearer_key": {"required": True, "type": "str"},
+        "api_bearer_key": {"required": True, "type": "str", "no_log": True},
         "agentImageOverride": {"required": False, "type": "str"},
         "description": {"required": False, "type": "str"},
         "desiredAgentImage": {"required": False, "type": "str"},

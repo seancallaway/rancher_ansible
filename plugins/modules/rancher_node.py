@@ -146,7 +146,7 @@ def main():
     fields = {
         "name": {"required": True, "type": "str"},
         "rancher_url": {"required": True, "type": "str"},
-        "api_bearer_key": {"required": True, "type": "str"},
+        "api_bearer_key": {"required": True, "type": "str", "no_log": True},
         "force": {"default": False, "type": "bool"},
         "deleteLocalData": {"default": False, "type": "bool"},
         "ignoreDaemonSets": {"default": True, "type": "bool"},
