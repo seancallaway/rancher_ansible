@@ -36,6 +36,35 @@ Contains the following modules:
 Note that the activation command (minus the `--worker`, `--etcd`, or `--controlplane` flags) is returned as 
 `registration_token`.
 
+The following shows a more complete example of the usage of the `rancher_cluster` module including all optional parameters:
+
+```yaml
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Create rancher cluster including optional parameters
+    rancher_cluster:
+      name: test-cluster2
+      description: Another test cluster created via Ansible
+      rancher_url: https://rancher.mydomain.com
+      api_bearer_key: token-xyz:abcdefg0123456789
+      network_plugin: calico
+      agentImageOverride: my-org/my-image
+      desiredAgentImage: my-org/my-image
+      desiredAuthImage: my-org/my-image
+      dockerRootDir: /var/lib/docker
+      enableClusterAlerting: True
+      enableClusterMonitoring: True
+      ignore_docker_version: True
+      validate_certs: True
+      labels:
+        mylabel: Value
+        other_label: Value
+      annotations:
+        first_annotation: "Value"
+        second_annotation: "Another value"
+```
+
 #### rancher_node
 
 ```yaml
